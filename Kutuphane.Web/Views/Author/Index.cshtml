@@ -1,0 +1,193 @@
+﻿@section Styles
+	{
+	<link rel="stylesheet" href="//cdn.datatables.net/1.13.4/css/jquery.dataTables.min.css" />
+}
+<div>
+	<div class="card">
+		<div class="card-header  text-white bg-success bg-gradient">
+			<span class="fs-4">Yazar Listesi</span>
+			<a href="#" id="btnEkle" class="btn btn-warning ms-2">Yazar Ekle</a>
+		</div>
+		<div class="card-body">
+			<table id="tblAuthor" class="table table-bordered table-striped" style="width:100%">
+				<thead>
+					<tr>
+						<th>Guid</th>
+						<th>Yazar Adı</th>
+						<th>Açıklama</th>
+						<th>Oluşturulma Tarihi</th>
+						<th>İşlemler</th>
+					</tr>
+				</thead>
+			</table>
+		</div>
+	</div>
+</div>
+@*-------------------------------------------MODAL ADD----------------------------------------------------------------*@
+<div class="modal fade" id="modal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false" role="dialog"
+	aria-labelledby="modalTitleId" aria-hidden="true">
+	<div class="modal-dialog modal-dialog-scrollable modal-dialog-centered modal-md" role="document">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title" id="modalTitle">Yazar Ekle </h5>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<div class="modal-body">
+				<div class="container">
+					<div class="mb-3">
+						<label class="form-label">Yazar Adı</label>
+						<input type="text" id="txtName" class="form-control">
+					</div>
+					<div class="mb-3">
+						<label class="form-label">Yazar Açıklaması</label>
+						<textarea id="txtDescription" class="form-control"></textarea>
+					</div>
+				</div>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+				<a href="#" id="btnSave" class="btn btn-primary">Kaydet</a>
+			</div>
+		</div>
+	</div>
+</div>
+
+
+@section Scripts{
+				<script src="//cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+				<script>
+					var DataTable;
+					$(document).ready(function () {
+
+						$("#btnEkle").click(function () {
+							$("#modalTitle").text("Yazar Ekle");
+							$("#btnSave").text("Kaydet").removeClass('btn-success').addClass('btn-primary');
+							$('#txtName').val("");
+							$('#txtDescription').val("");
+							$("#modal").modal('show');
+
+						
+
+							$('#btnSave').off();
+							$("#btnSave").click(function () {
+
+								let veri = {
+									name: $("#txtName").val(),
+									description: $("#txtDescription").val()
+								};
+
+
+								$.ajax({
+									type: 'POST',
+									url: '/Author/Create',
+									data: veri,
+									success: function (res) {
+										$("#modal").modal('hide');
+										toastr.success("Kayıt başarıyla eklendi");
+										$('#txtName').val("");
+										$('#txtDescription').val("");
+										DataTable.ajax.reload();
+									}
+								})
+							});
+
+						});
+
+
+						DataTable = $('#tblAuthor').DataTable({
+							ajax: '/Author/GetAll',
+							columns: [
+								{ data: 'id' },
+								{ data: 'name' },
+								{ data: 'description' },
+								{ data: 'dateCreated' },
+								{
+									data: 'id', render: function (data) {
+										return `<a href="#" onclick="deleteAuthor('${data}')" class="btn btn-sm btn-danger">Sil</a>
+																<a href="#" onclick="editAuthor('${data}')" class="btn btn-sm btn-primary">Düzenle</a>
+												   `
+									}
+								}
+
+							]
+						});
+					});
+
+					function deleteAuthor(id) {
+
+						let data = {
+							id: id
+						}
+
+
+						Swal.fire({
+							title: 'Silmek istediğinize emin misiniz?',
+							text: "Yazar Silinecek",
+							icon: 'warning',
+							showCancelButton: true,
+							confirmButtonColor: '#3085d6',
+							cancelButtonColor: '#d33',
+							confirmButtonText: 'Sil!'
+							}).then((result) => {
+								if (result.isConfirmed) {
+									$.ajax({
+									type: 'DELETE',
+									url: '/Author/Delete',
+									data: data,
+									success: function () {
+										Swal.fire(
+										'Başarılı!',
+										'Yazar silindi.',
+										'success'
+										)
+										DataTable.ajax.reload();
+									},
+									error: function(){
+										Swal.fire({
+										icon: 'error',
+										title: 'Silme işlemi başarısız!',
+										text: 'Bir şeyler yanlış gitti!'
+										})
+									}
+									});
+							}
+						})
+
+					}
+
+					function editAuthor(id) {
+						$("#modalTitle").text("Yazar Düzenle");
+						$("#btnSave").text("Güncelle").removeClass('btn-primary').addClass('btn-success');
+
+						$.ajax({
+							type: 'POST',
+							url: '/Author/GetById',
+							data: { id: id },
+							success: function (res) {
+								$('#txtName').val(res.name);//json dönüşlerinde değişkenler camelCase'e çevirir
+								$('#txtDescription').val(res.description);
+								$('#btnSave').off();
+								$('#btnSave').click(function (){
+									$.ajax({
+										type: 'POST',
+										url: '/Author/Update',
+										data: {
+											id: id,
+											name: $('#txtName').val(),
+											description: $('#txtDescription').val()
+										},
+										success: function () {
+											$('#modal').modal('hide');
+											toastr.success("Başarıyla güncellendi");
+											DataTable.ajax.reload();
+										}
+									})
+								})
+								$("#modal").modal("show");
+							}
+						})
+					}
+
+				</script>
+
+}

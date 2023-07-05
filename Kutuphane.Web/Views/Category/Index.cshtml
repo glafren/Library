@@ -1,0 +1,194 @@
+﻿@section Styles
+	{
+	<link rel="stylesheet" href="//cdn.datatables.net/1.13.4/css/jquery.dataTables.min.css" />
+}
+<div>
+	<div class="card">
+		<div class="card-header  text-white bg-success bg-gradient">
+			<span class="fs-4">Kategori Listesi</span>
+			<a href="#" id="btnEkle" class="btn btn-warning ms-2">Kategori Ekle</a>
+		</div>
+		<div class="card-body">
+			<table id="tblCategory" class="table table-bordered table-striped" style="width:100%">
+				<thead>
+					<tr>
+						<th>Guid</th>
+						<th>Kategori Adı</th>
+						<th>Açıklama</th>
+						<th>Oluşturulma Tarihi</th>
+						<th>İşlemler</th>
+					</tr>
+				</thead>
+
+			</table>
+
+		</div>
+	</div>
+</div>
+@*----------------------------------------------------------------MODAL ADD -------------------------------------------------------------------------------------------*@
+<div class="modal fade" id="modal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false" role="dialog" aria-labelledby="modalTitleId" aria-hidden="true">
+	<div class="modal-dialog modal-dialog-scrollable modal-dialog-centered modal-md" role="document">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title" id="modalTitle">Kategori Ekle </h5>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<div class="modal-body">
+				<div class="container">
+					<div class="mb-3">
+						<label class="form-label">Kategori Adı</label>
+						<input type="text" id="txtName" class="form-control">
+					</div>
+					<div class="mb-3">
+						<label class="form-label">Kategori Açıklaması</label>
+						<textarea id="txtDescription" class="form-control"></textarea>
+					</div>
+				</div>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+				<a href="#" id="btnSave" class="btn btn-primary">Kaydet</a>
+			</div>
+		</div>
+	</div>
+</div>
+
+
+@section Scripts{
+	<script src="//cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+	<script>
+		var DataTable;
+		$(document).ready(function () {
+
+			$("#btnEkle").click(function () {
+				$("#modalTitle").text("Kategori Ekle");
+				$("#btnSave").text("Kaydet").removeClass('btn-success').addClass('btn-primary');
+				$('#txtName').val("");
+				$('#txtDescription').val("");
+				$("#modal").modal('show');
+
+
+				$('#btnSave').off();
+				$("#btnSave").click(function () {
+
+					let veri = {
+						name: $("#txtName").val(),
+						description: $("#txtDescription").val()
+					};
+
+
+					$.ajax({
+						type: 'POST',
+						url: '/Category/Create',
+						data: veri,
+						success: function (res) {
+							$("#modal").modal('hide');
+							toastr.success("Kayıt başarıyla eklendi");
+							$('#txtName').val("");
+							$('#txtDescription').val("");
+							DataTable.ajax.reload();
+						}
+					})
+				});
+
+			});
+
+
+			DataTable = $('#tblCategory').DataTable({
+				ajax: '/Category/GetAll',
+				columns: [
+					{ data: 'id' },
+					{ data: 'name' },
+					{ data: 'description' },
+					{ data: 'dateCreated' },
+					{
+						data: 'id', render: function (data) {
+							return `<a href="#" onclick="deleteCategory('${data}')" class="btn btn-sm btn-danger">Sil</a>
+																<a href="#" onclick="editCategory('${data}')" class="btn btn-sm btn-primary">Düzenle</a>
+												   `
+						}
+					}
+
+				]
+			});
+		});
+
+		function deleteCategory(id) {
+
+			let data = {
+				id: id
+			}
+
+
+			Swal.fire({
+				title: 'Silmek istediğinize emin misiniz?',
+				text: "Kategori Silinecek",
+				icon: 'warning',
+				showCancelButton: true,
+				confirmButtonColor: '#3085d6',
+				cancelButtonColor: '#d33',
+				confirmButtonText: 'Sil!'
+			}).then((result) => {
+				if (result.isConfirmed) {
+					$.ajax({
+						type: 'DELETE',
+						url: '/Category/Delete',
+						data: data,
+						success: function () {
+							Swal.fire(
+								'Başarılı!',
+								'Kategori silindi.',
+								'success'
+							)
+							DataTable.ajax.reload();
+						},
+						error: function () {
+							Swal.fire({
+								icon: 'error',
+								title: 'Silme işlemi başarısız!',
+								text: 'Bir şeyler yanlış gitti!'
+							})
+						}
+					});
+				}
+			})
+
+		}
+
+		function editCategory(id) {
+			$("#modalTitle").text("Kategori Düzenle");
+			$("#btnSave").text("Güncelle").removeClass('btn-primary').addClass('btn-success');
+
+			$.ajax({
+				type: 'POST',
+				url: '/Category/GetById',
+				data: { id: id },
+				success: function (res) {
+					$('#txtName').val(res.name);//json dönüşlerinde değişkenler camelCase'e çevirir
+					$('#txtDescription').val(res.description);
+					$('#btnSave').off();
+					$('#btnSave').click(function () {
+						$.ajax({
+							type: 'POST',
+							url: 'Category/Update',
+							data: {
+								id: id,
+								name: $('#txtName').val(),
+								description: $('#txtDescription').val()
+							},
+							success: function () {
+								$('#modal').modal('hide');
+								toastr.success("Başarıyla güncellendi");
+								DataTable.ajax.reload();
+							}
+						})
+					})
+					$("#modal").modal("show");
+				}
+			})
+		}
+
+	</script>
+
+}
+
